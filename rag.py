@@ -38,8 +38,8 @@ def initialize_components():
         )
         vector_store = Chroma(
             collection_name=COLLECTION_NAME,
-            embedding_function=ef,
-            persist_directory=str(VECTOR_STORE_DIR)
+            embedding_function=ef
+            # no persist_directory
         )
 
 
