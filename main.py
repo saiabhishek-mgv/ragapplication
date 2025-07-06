@@ -20,10 +20,13 @@ if process_url_button:
             placeholder.text(status)
 query = placeholder.text_input("Question")
 if query:
-    answer, sources = generate_answer(query)
-    st.header("Answer:")
-    st.write(answer)
-    if sources:
-        st.subheader("Sources:")
-        for source in sources.split("\n"):
-            st.write(source)
+    try:
+        answer, sources = generate_answer(query)
+        st.header("Answer:")
+        st.write(answer)
+        if sources:
+            st.subheader("Sources:")
+            for source in sources:
+                st.write(source)
+    except RuntimeError as e:
+        placeholder.text(f"Error: {e}")

@@ -8,6 +8,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain.chains.qa_with_sources.loading import load_qa_with_sources_chain
+from prompt import PROMPT, EXAMPLE_PROMPT
 
 load_dotenv()
 GROQ_API = os.getenv("GROQ_API")
@@ -78,22 +80,37 @@ def process_urls(urls):
     # )
     # return chain
 
-def generate_answer(query):
-    """This function generates an answer to the question using the RAG system.
-    :param question: The question to answer
-    :return: The answer to the question
-    """
-    if not vector_store:
-        raise ValueError("Vector store is not initialized.")
+# def generate_answer(query):
+#     """This function generates an answer to the question using the RAG system.
+#     :param question: The question to answer
+#     :return: The answer to the question
+#     """
+#     if not vector_store:
+#         raise ValueError("Vector store is not initialized.")
 
-    chain = RetrievalQAWithSourcesChain.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=vector_store.as_retriever()
-    )
+#     chain = RetrievalQAWithSourcesChain.from_chain_type(
+#         llm=llm,
+#         chain_type="stuff",
+#         retriever=vector_store.as_retriever()
+#     )
+#     result = chain.invoke({"question": query}, return_only_outputs=True)
+#     sources = result.get('sources', "")
+#     return result['answer'], sources
+
+def generate_answer(query):
+    if not vector_store:
+        raise RuntimeError("Vector database is not initialized ")
+    
+    qa_chain = load_qa_with_sources_chain(llm, chain_type="stuff",
+                                      prompt=PROMPT,
+                                      document_prompt=EXAMPLE_PROMPT)
+    chain = RetrievalQAWithSourcesChain(combine_documents_chain=qa_chain, retriever=vector_store.as_retriever(),
+                                        reduce_k_below_max_tokens=True, max_tokens_limit=8000,
+                                        return_source_documents=True)
     result = chain.invoke({"question": query}, return_only_outputs=True)
-    sources = result.get('sources', "")
-    return result['answer'], sources
+    sources_docs = [doc.metadata['source'] for doc in result['source_documents']]
+
+    return result['answer'], sources_docs
 
 if __name__ == "__main__":
     urls = [
